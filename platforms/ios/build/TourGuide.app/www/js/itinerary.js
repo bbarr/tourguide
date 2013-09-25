@@ -11,16 +11,11 @@ window.itinerary = itinerary = {
   bindEvents: function() {
     var self = this;
     
-    this.$el.on('mouseover', 'a', function(e) {
+    this.$el.on('click', 'a', function(e) {
       e.preventDefault();
       var id = e.target.getAttribute('rel');
+      self.tour.places.forEach(self.hub.trigger.bind(this.hub, 'unhighlightPlace'));
       self.hub.trigger('highlightPlace', self.tour.places.filter(function(p) { return p.id === id })[0]);
-    });
-
-    this.$el.on('mouseout', 'a', function(e) {
-      e.preventDefault();
-      var id = e.target.getAttribute('rel');
-      self.hub.trigger('unhighlightPlace', self.tour.places.filter(function(p) { return p.id === id })[0]);
     });
 
     hub.on('highlightPlace', function(place) {

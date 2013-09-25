@@ -12,11 +12,27 @@ window.map = map = {
       new L.LatLng(41.8107, -69.919)
     ).pad(.2)
   },
+  popupHTML: function(place, note) {
+    var img;
+    if (place.photos && place.photos.value) {
+      var item = place.photos.value.groups[0].items[0];
+      img = item.prefix + '100x100' + item.suffix;
+    }
+    var prev = this.tour.places.indexOf(place) > 0;
+    var next = this.tour.places.indexOf(place) < this.tour.places.length - 1;
+    return [
+      "<div class='place' id='" + place.id + "'>",
+        "<h3>" + place.name + "</h3>",
+        "<p>Note: " + note + "</p>",
+        (img ? "<img src='" + img + "' />" : ""),
+        "<p>" + ((prev) ? "<a href='#' class='previous'>previous</a>" : "") + " " + ((next) ? "<a href='#' class='next'>next</a></p>" : ""),
+      "</div>"
+    ].join('');
+  },
 
   // tour stuff
   tour: null,
   markers: [],
-  polylines: [],
 
   setTour: function(tour) {
     this.tour = tour;
@@ -25,44 +41,33 @@ window.map = map = {
   },
 
   clear: function() {
-    this.markers.concat(this.polylines).forEach(this.mapbox.removeLayer, this.mapbox);
+    this.markers.forEach(this.mapbox.removeLayer, this.mapbox);
   },
 
   render: function() {
 
     var bounds = this.tour.places.map(function(place, i) {
 
-      var pos = [place.location.latitude, place.location.longitude];
+      var pos = [ place.location.latitude, place.location.longitude ];
 
       var marker = L.marker(pos);
       marker.id = place.id;
-      marker.bindPopup(this.tour.notes[i][0]);
+
+      marker
+        .bindPopup(this.popupHTML(place, this.tour.notes[i][0]))
+        // trash the default action
+        .off('click', this.togglePopup);
+
       this.markers.push(marker.addTo(this.mapbox));
 
-      marker.on('mouseover', function() {
+      marker.on('click', function() {
+        this.tour.places.forEach(this.hub.trigger.bind(this.hub, 'unhighlightPlace'));
         this.hub.trigger('highlightPlace', place);
       }, this);
 
-      marker.on('mouseout', function() {
+      marker.on('popupclose', function() {
         this.hub.trigger('unhighlightPlace', place);
       }, this);
-
-      var last = this.markers[i - 1];
-      if (last) {
-
-        var polyline = L.polyline([ last.getLatLng(), pos ]);
-        polyline.bindPopup(this.tour.notes[i - 1][1] || 'no comment');
-        this.polylines.push(polyline.addTo(this.mapbox));
-
-        polyline.on('mouseover', function(e) {
-          var center = e.target.getBounds().getCenter();
-          polyline.openPopup(center);
-        }, this);
-
-        polyline.on('mouseout', function() {
-          polyline.closePopup();
-        }, this);
-      }
 
       return pos;
     }, this);
@@ -81,6 +86,20 @@ window.map = map = {
       var marker = this.markers.filter(function(m) { return m.id === place.id; })[0];
       marker.closePopup();
     }, this);
+    var self = this;
+    this.$('body')
+      .on('click', '.next', function(e) {
+        var id = self.$(e.target).closest('.place').attr('id');
+        var place = self.tour.places.filter(function(p) { return p.id === id; })[0];
+        var nextPlace = self.tour.places[self.tour.places.indexOf(place) + 1] || self.tour.places[0];
+        self.hub.trigger('highlightPlace', nextPlace);
+      })
+      .on('click', '.previous', function(e) {
+        var id = $(e.target).closest('.place').attr('id');
+        var place = self.tour.places.filter(function(p) { return p.id === id; })[0];
+        var previousPlace = self.tour.places[self.tour.places.indexOf(place) - 1] || self.tour.places[self.tour.places.length - 1];
+        self.hub.trigger('highlightPlace', previousPlace);
+      });
   },
 
   initialize: function($, hub) {
