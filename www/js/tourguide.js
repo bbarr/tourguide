@@ -45,7 +45,7 @@ window.tourguide = tourguide = {
 
   fetch: function() {
     var hub = this.hub;
-    return $.get('http://localhost:9393/tours', function(tours) {
+    return $.get('http://townpulse.herokuapp.com/tours', function(tours) {
       hub.trigger('toursLoaded', tours);
     });
   },

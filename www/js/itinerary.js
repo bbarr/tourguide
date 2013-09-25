@@ -3,7 +3,7 @@ window.itinerary = itinerary = {
   initialize: function($, hub) {
     this.$ = $;
     this.hub = hub;
-    this.$el = $('#itinerary');
+    this.$el = $('#itinerary ul');
     this.hub.on('showingTour', this.setTour, this);
     this.bindEvents();
   },
@@ -19,8 +19,18 @@ window.itinerary = itinerary = {
     });
 
     hub.on('highlightPlace', function(place) {
+      var $a = self.$el.find('[rel="' + place.id + '"]');
+      var $li = $a.closest('li');
+      var $ul = $li.closest('ul');
+      var $div = $ul.closest('div');
+      var lis = $ul.find('li');
       self.$el.find('li').removeClass('active');
-      self.$el.find('[rel="' + place.id + '"]').parent().addClass('active');
+      $li.addClass('active')
+      var offset = lis.slice(0, lis.indexOf($li[0])).reduce(function(width, li) { return width + $(li).width(); }, $li.width())
+      var width = $div.width();
+      console.log(offset, width);
+      var left = offset > width ? offset - width : 0;
+      $div.css({ left: left * -1 });
     });
 
     hub.on('unhighlightPlace', function(place) {
@@ -31,9 +41,13 @@ window.itinerary = itinerary = {
   setTour: function(tour) {
     this.$el.html('');
     this.tour = tour;
-    this.tour.places.forEach(function(place) {
-      this.$el.append(this.$('<li><a href="#" rel="' + place.id + '">' + place.name + '</a></li>'));
+    var widths = this.tour.places.map(function(place) {
+      var li = this.$('<li><a href="#" rel="' + place.id + '">' + place.name + '</a></li>');
+      this.$el.append(li);
+      return $(li).width();
     }, this);
+    var width = widths.reduce(function(sum, w) { return sum + w });
+    this.$el.css({ width: width });
   }
 }
 
